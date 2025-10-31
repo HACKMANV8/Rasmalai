@@ -1,0 +1,14 @@
+# Core libraries
+numpy
+pandas
+librosa
+tqdm
+scikit-learn
+matplotlib
+
+# Deep learning + NLP
+torch
+transformers
+
+# For Kaggle downloads & file handling
+kaggle
