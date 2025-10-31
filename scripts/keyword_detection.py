@@ -1,6 +1,6 @@
 import speech_recognition as sr
 
-DISTRESS_KEYWORDS = ["help", "save me", "please help", "emergency"]
+DISTRESS_KEYWORDS = ["help", "stuck", "save me", "please help", "emergency"]
 NEUTRAL_KEYWORDS = ["hello", "how are you", "good morning"]
 POSITIVE_KEYWORDS = ["thank you", "great", "awesome", "nice"]
 
