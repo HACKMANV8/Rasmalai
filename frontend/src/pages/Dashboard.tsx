@@ -1,15 +1,86 @@
+import { useState, useEffect } from "react";
 import { AudioMonitor } from "@/components/AudioMonitor";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle, CheckCircle2, Clock, Shield } from "lucide-react";
+import { DistressAlertDialog } from "@/components/AlertDialog";
+import { SettingsToggle } from "@/components/SettingsToggle";
+import { api } from "@/lib/api";
 
 export default function Dashboard() {
+  const [activeAlert, setActiveAlert] = useState<{
+    id: string;
+    source: string;
+    confidence: number;
+    message: string;
+    timestamp: string;
+  } | null>(null);
+  const [alertStats, setAlertStats] = useState({ active: 0, total: 0 });
+  const [micEnabled, setMicEnabled] = useState(false);
+  const [locationEnabled, setLocationEnabled] = useState(false);
+
+  // Request location permission on mount
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        () => setLocationEnabled(true),
+        () => setLocationEnabled(false),
+        { enableHighAccuracy: true }
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    // Poll for active alerts
+    const interval = setInterval(async () => {
+      try {
+        const alerts = await api.getActiveAlerts();
+        setAlertStats({ active: alerts.length, total: alerts.length });
+      } catch (error) {
+        console.error("Failed to fetch alerts:", error);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleDistressDetected = (alert: {
+    id: string;
+    source: string;
+    confidence: number;
+    message: string;
+    timestamp: string;
+  }) => {
+    setActiveAlert(alert);
+  };
+
+  const handleCancelAlert = async () => {
+    if (activeAlert) {
+      try {
+        await api.cancelAlert(activeAlert.id);
+        setActiveAlert(null);
+      } catch (error) {
+        console.error("Failed to cancel alert:", error);
+      }
+    }
+  };
+
+  const handleConfirmAlert = async () => {
+    if (activeAlert) {
+      try {
+        await api.confirmAlert(activeAlert.id);
+        setActiveAlert(null);
+      } catch (error) {
+        console.error("Failed to confirm alert:", error);
+      }
+    }
+  };
   const stats = [
     {
       title: "Active Alerts",
-      value: "0",
+      value: alertStats.active.toString(),
       icon: AlertTriangle,
-      color: "text-success",
-      bgColor: "bg-success/10",
+      color: alertStats.active > 0 ? "text-destructive" : "text-success",
+      bgColor: alertStats.active > 0 ? "bg-destructive/10" : "bg-success/10",
     },
     {
       title: "Total Monitors",
@@ -57,7 +128,47 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
-      <AudioMonitor />
+      <SettingsToggle
+        micEnabled={micEnabled}
+        locationEnabled={locationEnabled}
+        onMicToggle={(enabled) => {
+          setMicEnabled(enabled);
+          // Request mic permission
+          if (enabled) {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+              .then(() => setMicEnabled(true))
+              .catch(() => {
+                setMicEnabled(false);
+                alert("Microphone permission denied. Please allow microphone access.");
+              });
+          }
+        }}
+        onLocationToggle={(enabled) => {
+          setLocationEnabled(enabled);
+          // Request location permission
+          if (enabled) {
+            navigator.geolocation.getCurrentPosition(
+              () => setLocationEnabled(true),
+              () => {
+                setLocationEnabled(false);
+                alert("Location permission denied. Please allow location access.");
+              },
+              { enableHighAccuracy: true }
+            );
+          }
+        }}
+      />
+      <AudioMonitor 
+        onDistressDetected={handleDistressDetected}
+        enabled={micEnabled}
+      />
+      <DistressAlertDialog
+        alert={activeAlert}
+        open={!!activeAlert}
+        onClose={() => setActiveAlert(null)}
+        onConfirm={handleConfirmAlert}
+        onCancel={handleCancelAlert}
+      />
       <Card className="p-6">
         <h3 className="mb-4 text-lg font-semibold">Recent Activity</h3>
         <div className="space-y-4">

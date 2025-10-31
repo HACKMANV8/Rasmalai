@@ -1,0 +1,19 @@
+{
+  "email_smtp_server": "smtp.gmail.com",
+  "email_smtp_port": 587,
+  "email_username": "sanskritigogoi2004@gmail.com",
+  "email_password": "eacc awyf ojuu feoa",
+  "email_from": "sanskritigogoi2004@gmail.com",
+  "emergency_contacts": [
+    {
+      "name": "Emergency Contact",
+      "email": "sanskritigogoi2004@gmail.com"
+    },
+    {
+      "name": "ria arora",
+      "email": "dizgogoi2004@gmail.com"
+    }
+  ],
+  "alert_window_seconds": 10,
+  "use_location": true
+}

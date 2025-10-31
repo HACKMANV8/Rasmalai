@@ -1,5 +1,6 @@
 import re
 import os
+import sys
 import pickle
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "../models/emotion_model.pkl")
 
@@ -35,11 +36,27 @@ def analyze_distress(transcript: str, volume=None, pitch=None):
     keyword_result = detect_keywords(transcript)
     emotion_state = detect_emotion(transcript, volume, pitch)
 
-    return {
+    # Check if distress detected by emotion (fearful, angry, sad -> distress)
+    emotion_distress = emotion_state in ["distressed", "fearful", "angry", "sad"]
+    
+    # Combine keyword and emotion detection
+    distress_detected = keyword_result.get("distress_detected", False) or emotion_distress
+    
+    # Adjust confidence based on both sources
+    confidence = keyword_result.get("confidence", 0.2)
+    if emotion_distress and not keyword_result.get("distress_detected", False):
+        confidence = 0.7  # Emotion-based detection has moderate confidence
+        keyword_result["reason"] = f"emotion: '{emotion_state}'"
+    
+    result = {
         "transcript": transcript,
         "emotion": emotion_state,
+        "distress_detected": distress_detected,
+        "confidence": confidence,
         **keyword_result
     }
+    
+    return result
 if __name__ == "__main__":
     example_data = {"transcript": "help me please", "volume": 0.8, "pitch": 230}
 

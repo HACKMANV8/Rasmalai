@@ -12,3 +12,13 @@ transformers
 
 # For Kaggle downloads & file handling
 kaggle
+
+# Alert & Response System
+playsound
+pygame
+requests
+# Note: Email functionality uses Python's built-in smtplib (no extra package needed)
+
+# Web API
+flask
+flask-cors
