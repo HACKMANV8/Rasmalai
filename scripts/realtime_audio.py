@@ -1,34 +1,55 @@
 import sounddevice as sd
-import librosa
-import numpy as np
-import pickle
+import torch
+import torch.nn.functional as F
+from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
+from torchaudio.transforms import Resample
 
+# Load pretrained model
+model_name = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name)
+model = Wav2Vec2ForSequenceClassification.from_pretrained(model_name)
 
-model_path = r"C:\Users\san-s\OneDrive\Desktop\Rasmalai\models\emotion_model.pkl"
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
-
-print(" Model loaded successfully")
-
-
-def extract_features_from_audio(y, sr):
-    mfcc = np.mean(librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40).T, axis=0)
-    chroma = np.mean(librosa.feature.chroma_stft(S=np.abs(librosa.stft(y)), sr=sr).T, axis=0)
-    rms = np.mean(librosa.feature.rms(y=y))
-    zcr = np.mean(librosa.feature.zero_crossing_rate(y))
-    return np.hstack([mfcc, chroma, rms, zcr])
-
-def record_audio(duration=3, fs=16000):
-    print("Recording...")
+def record_audio(duration=4, fs=16000):
+    print("🎙️ Recording audio...")
     audio = sd.rec(int(duration * fs), samplerate=fs, channels=1)
     sd.wait()
-    print("Recording complete")
-    y = np.squeeze(audio)
-    return y, fs
+    print("✅ Done recording!")
+    return torch.tensor(audio.T)
+
+def predict_emotion(y, rate=16000):
+    if rate != 16000:
+        y = Resample(orig_freq=rate, new_freq=16000)(y)
+
+    inputs = extractor(y.squeeze().numpy(), sampling_rate=16000, return_tensors="pt", padding=True)
+    with torch.no_grad():
+        logits = model(**inputs).logits
+        probs = F.softmax(logits, dim=-1)
+
+    label_map = ['angry', 'calm', 'disgust', 'fearful', 'happy', 'neutral', 'sad', 'surprised']
+    pred_idx = torch.argmax(probs)
+    base_emotion = label_map[pred_idx]
+    confidence = probs[0, pred_idx].item()
+
+    # emotion grouping: fear → distress (always)
+    emotion_map = {
+        "angry": "distress",
+        "disgust": "distress",
+        "fearful": "distress",   # 👈 fear now maps to distress always
+        "sad": "distress",
+        "calm": "neutral",
+        "neutral": "neutral",
+        "happy": "positive",
+        "surprised": "positive"
+    }
+
+    # low-confidence override (optional)
+    if confidence < 0.14:
+        final_emotion = "neutral"
+    else:
+        final_emotion = emotion_map.get(base_emotion, "neutral")
+
+    print(f"Predicted Emotion: {final_emotion.upper()} (base: {base_emotion}, confidence: {confidence:.2f})")
 
 
-y, sr = record_audio(3)
-features = extract_features_from_audio(y, sr).reshape(1, -1)
-emotion = model.predict(features)[0]
-
-print("Predicted Emotion:", emotion)
+audio_tensor = record_audio()
+predict_emotion(audio_tensor)
