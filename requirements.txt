@@ -13,6 +13,7 @@ transformers
 # For Kaggle downloads & file handling
 kaggle
 
+
 # Alert & Response System
 playsound
 pygame
@@ -22,3 +23,11 @@ requests
 # Web API
 flask
 flask-cors
+
+# Combined Pipeline Dependencies
+librosa
+sounddevice
+speech-recognition
+soundfile
+torch
+transformers

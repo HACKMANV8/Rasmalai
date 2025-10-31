@@ -46,6 +46,21 @@ export const api = {
   },
 
   /**
+   * Analyze audio file using combined pipeline (advanced emotion detection)
+   */
+  async analyzeAudio(audioFile: File): Promise<AnalyzeResponse> {
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+    
+    const response = await fetch(`${API_BASE}/analyze-audio`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) throw new Error('Audio analysis failed');
+    return response.json();
+  },
+
+  /**
    * Cancel an alert (false positive)
    */
   async cancelAlert(alertId: string): Promise<{ success: boolean; message: string }> {
